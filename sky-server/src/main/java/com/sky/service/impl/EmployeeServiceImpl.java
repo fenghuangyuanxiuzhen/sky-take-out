@@ -75,10 +75,10 @@ public class EmployeeServiceImpl implements EmployeeService {
         //添上这里边没有的属性
         employee.setStatus(StatusConstant.ENABLE);
         employee.setPassword(DigestUtils.md5DigestAsHex((PasswordConstant.DEFAULT_PASSWORD).getBytes()));
-        employee.setCreateTime(LocalDateTime.now());
-        employee.setUpdateTime(LocalDateTime.now());
-        employee.setUpdateUser(BaseContext.getCurrentId());
-        employee.setCreateUser(BaseContext.getCurrentId());
+//        employee.setCreateTime(LocalDateTime.now());
+//        employee.setUpdateTime(LocalDateTime.now());
+//        employee.setUpdateUser(BaseContext.getCurrentId());
+//        employee.setCreateUser(BaseContext.getCurrentId());
         employeeMapper.insert(employee);
     }
 
@@ -113,9 +113,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         //1.先转换为 employee
         BeanUtils.copyProperties(employeeDTO,employee);
         //2.设置参数
-        employee.setUpdateTime(LocalDateTime.now());
+//        employee.setUpdateTime(LocalDateTime.now());
         //拦截器再TheadLocal里存放的id
-        employee.setUpdateUser(BaseContext.getCurrentId());
+//        employee.setUpdateUser(BaseContext.getCurrentId());
         employeeMapper.update(employee);
     }
 
