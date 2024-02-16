@@ -11,5 +11,16 @@ import java.util.List;
  */
 @Mapper
 public interface FlavorMapper {
+    /**
+     * 批量插入口味
+     * @param flavors
+     */
     void insertBatch(List<DishFlavor> flavors);
+
+    /**
+     * 批量删除风味
+     * @param ids
+     */
+
+    void deletes(List<Long> ids);
 }
