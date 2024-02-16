@@ -46,8 +46,6 @@ public class DishServiceImpl implements DishService {
         List<DishFlavor> flavors = dishDTO.getFlavors();
         if(flavors != null && flavors.size()>0){
 
-
-
         flavors.forEach(dishFlavor -> {
             dishFlavor.setDishId(id);
         });
@@ -115,6 +113,18 @@ public class DishServiceImpl implements DishService {
 
 
         }
+    }
+
+    @Override
+    public List<Dish> getDishByCategoryId(Long categoryId) {
+        List<Dish> dishes = dishMapper.getByCategoryId(categoryId);
+        return dishes;
+    }
+
+    @Override
+    public void startOrStop(int status, Long id) {
+        Dish dish = Dish.builder().id(id).status(status).build();
+        dishMapper.update(dish);
     }
 
 
