@@ -15,13 +15,6 @@ import java.util.List;
 @Mapper
 public interface DishMapper {
 
-    /**
-     * 根据分类id查询菜品数量
-     * @param categoryId
-     * @return
-     */
-    @Select("select count(id) from dish where category_id = #{categoryId}")
-    Integer countByCategoryId(Long categoryId);
 
     /**
      * 添加菜品
@@ -60,12 +53,31 @@ public interface DishMapper {
     @AutoFill(value = OperationType.UPDATE)
     void update(Dish dish);
 
+
+
     /**
-     * 根据分类id查询菜品
-     * @param categoryId
+     * 动态查询菜品
+     * @param dish
      * @return
      */
-    @Select("select * from dish where category_id=#{categoryId}")
 
-    List<Dish> getByCategoryId(Long categoryId);
+    List<Dish> list(Dish dish);
+
+    /**
+     *
+     * @param id
+     * @return
+     */
+    @Select("select count(*) from dish where category_id = #{id}")
+
+    Integer countByCategoryId(Long id);
+
+    /**
+     * 根据套餐id查菜品
+     * @param id
+     * @return
+     */
+    @Select("select a.* from dish a left join setmeal_dish b on a.id = b.dish_id where b.setmeal_id = #{setmealId}")
+
+    List<Dish> getBySetmealId(Long id);
 }
