@@ -90,6 +90,11 @@ public class DishController {
         cleanCache("dish_*");
         return Result.success();
     }
+
+    /**
+     * 清空redis缓存
+     * @param pattern
+     */
     private void cleanCache(String pattern){
         Set keys = redisTemplate.keys(pattern);
         redisTemplate.delete(keys);
