@@ -1,9 +1,12 @@
 package com.sky.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
 import com.sky.dto.OrdersDTO;
+import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.entity.*;
@@ -11,11 +14,13 @@ import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
 import com.sky.mapper.*;
+import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import org.apache.ibatis.javassist.tools.rmi.ObjectNotFoundException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +30,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author 杨楠
@@ -69,9 +75,10 @@ public class OrderServiceImpl implements OrderService {
         orders.setNumber(String.valueOf(System.currentTimeMillis()));
         orders.setStatus(Orders.PENDING_PAYMENT);
         orders.setUserId(currentId);
-        orders.setPayStatus(Orders.PAID);
+        orders.setPayStatus(Orders.UN_PAID);
         orders.setConsignee(addressBook.getConsignee());
         orders.setPhone(addressBook.getPhone());
+        orders.setAddress(addressBook.getDetail());
         //3.插入orders 返回id和 order_detail
         orderMapper.insert(orders);
 
@@ -146,5 +153,81 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderMapper.update(orders);
+    }
+
+    @Override
+    public PageResult getHistoryOrders(int pageNum, int pageSize, Integer status) {
+        PageHelper.startPage(pageNum,pageSize);
+        OrdersPageQueryDTO ordersPageQueryDTO = new OrdersPageQueryDTO();
+        ordersPageQueryDTO.setStatus(status);
+        ordersPageQueryDTO.setUserId(BaseContext.getCurrentId());
+
+        //1.开启一个分页查询把这个 userId 的订单都查出来  利用status进行一个动态查询
+         Page<Orders> pages = orderMapper.pageQuery(ordersPageQueryDTO);
+        List<OrderVO> list = new ArrayList();
+
+        // 查询出订单明细，并封装入OrderVO进行响应
+        if (pages != null && pages.getTotal() > 0) {
+            for (Orders orders : pages) {
+                Long orderId = orders.getId();// 订单id
+
+                // 查询订单明细
+                List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(orderId);
+
+                OrderVO orderVO = new OrderVO();
+                BeanUtils.copyProperties(orders, orderVO);
+                orderVO.setOrderDetailList(orderDetails);
+
+                list.add(orderVO);
+            }
+        }
+        return new PageResult(pages.getTotal(), list);
+    }
+
+    @Override
+    public OrderVO getDetails(Long id) {
+        Orders orders = orderMapper.getById(id);
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(orders,orderVO);
+        orderVO.setOrderDetailList(orderDetailList);
+        return orderVO;
+    }
+
+    @Override
+    public void cancelOrderById(Long id) throws Exception {
+        Orders ordersDB = orderMapper.getById(id);
+        if(ordersDB == null){
+            throw new ObjectNotFoundException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+        if(ordersDB.getStatus() > 2){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        Orders orders = new Orders();
+        orders.setId(ordersDB.getId());
+        //如果有商户这里需要退款
+        // 更新订单状态、取消原因、取消时间
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason("用户取消");
+        orders.setCancelTime(LocalDateTime.now());
+        orderMapper.update(orders);
+
+    }
+
+    @Override
+    public void repetition(Long id) {
+        //1.把订单细节里头的信息在放入购物车中
+        Long userId = BaseContext.getCurrentId();
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+        //将orderDetailList转换为shoppingCartList
+        List<ShoppingCart> shoppingCartList = orderDetailList.stream().map(x->{
+            ShoppingCart shoppingCart = new ShoppingCart();
+            BeanUtils.copyProperties(x,shoppingCart,"id");
+            shoppingCart.setUserId(userId);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+            return shoppingCart;
+        }).collect(Collectors.toList());
+        shoppingCartMapper.BatchInsert(shoppingCartList);
     }
 }
