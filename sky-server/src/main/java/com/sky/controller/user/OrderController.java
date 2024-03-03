@@ -1,10 +1,6 @@
 package com.sky.controller.user;
-
-import com.aliyun.oss.model.GenerateRtmpUriRequest;
-import com.sky.dto.OrdersDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
-import com.sky.entity.Orders;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.OrderService;
@@ -17,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 /**
  * @author 杨楠
@@ -112,13 +107,13 @@ public class OrderController {
      * @param id
      * @return
      */
-//    @GetMapping("/reminder/{id}")
-//    @ApiOperation("催单")
-//    public Result reminder(@PathVariable Long id){
-//        orderService.reminder(id);
-//        return Result.success();
-//
-//    }
+    @GetMapping("/reminder/{id}")
+    @ApiOperation("催单")
+    public Result reminder(@PathVariable Long id){
+        orderService.reminder(id);
+        return Result.success();
+
+    }
 
 
 
