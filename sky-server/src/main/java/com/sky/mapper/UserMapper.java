@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author 杨楠
@@ -43,5 +44,5 @@ public interface UserMapper {
      * @return
      */
 
-    Integer getCountUserByMap(HashMap map);
+    Integer getCountUserByMap(Map map);
 }
