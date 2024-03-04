@@ -5,16 +5,22 @@ import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
-import com.sky.vo.OrderReportVO;
-import com.sky.vo.SalesTop10ReportVO;
-import com.sky.vo.TurnoverReportVO;
-import com.sky.vo.UserReportVO;
+import com.sky.service.WorkspaceService;
+import com.sky.vo.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +40,8 @@ public class ReportServiceImpl implements ReportService {
     OrderMapper orderMapper;
     @Autowired
     UserMapper userMapper;
+    @Autowired
+    WorkspaceService workspaceService;
     @Override
     public TurnoverReportVO turnoverStatistics(LocalDate begin, LocalDate end) {
         //1封装日期
@@ -150,6 +158,56 @@ public class ReportServiceImpl implements ReportService {
                 .nameList(StringUtils.join(name,","))
                 .numberList(StringUtils.join(number,","))
                 .build();
+    }
+
+    @Override
+    public void exportBusinessData(HttpServletResponse response) {
+        LocalDate begin = LocalDate.now().minusDays(30);
+        LocalDate end = LocalDate.now().minusDays(1);
+        //1.导入表
+        InputStream in  = this.getClass().getClassLoader().getResourceAsStream("template/运营数据报表模板.xlsx");
+        //2.查数据写数据
+        BusinessDataVO businessData = workspaceService.getBusinessData(LocalDateTime.of(begin, MIN), LocalDateTime.of(end, MAX));
+        try {
+            //基于提供好的模板文件创建一个新的Excel表格对象
+            XSSFWorkbook excel = new XSSFWorkbook(in);
+            XSSFSheet sheet = excel.getSheetAt(0);
+            sheet.getRow(1).getCell(1).setCellValue(begin+"至"+end);
+            XSSFRow row = sheet.getRow(3);
+            row.getCell(2).setCellValue(businessData.getTurnover());
+            row.getCell(4).setCellValue(businessData.getOrderCompletionRate());
+            row.getCell(6).setCellValue(businessData.getNewUsers());
+            row = sheet.getRow(4);
+            row.getCell(2).setCellValue(businessData.getValidOrderCount());
+            row.getCell(4).setCellValue(businessData.getUnitPrice());
+            for(int i = 0 ; i < 30 ; i++){
+                businessData = workspaceService.getBusinessData(LocalDateTime.of(begin, MIN), LocalDateTime.of(begin, MAX));
+                begin = begin.plusDays(1);
+                row = sheet.getRow(7 + i);
+                row.getCell(1).setCellValue(begin.toString());
+                row.getCell(2).setCellValue(businessData.getTurnover());
+                row.getCell(3).setCellValue(businessData.getValidOrderCount());
+                row.getCell(4).setCellValue(businessData.getOrderCompletionRate());
+                row.getCell(5).setCellValue(businessData.getUnitPrice());
+                row.getCell(6).setCellValue(businessData.getNewUsers());
+
+
+
+            }
+            //3.输出表 关闭资源
+            ServletOutputStream out = response.getOutputStream();
+            excel.write(out);
+            out.flush();
+            out.close();
+            excel.close();
+
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+
     }
 
     private Integer getOrdersByMap(LocalDateTime begin,LocalDateTime end ,Integer status){
